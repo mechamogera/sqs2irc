@@ -1,0 +1,11 @@
+aws:
+  access_key_id: 
+  secret_access_key:
+  region: 
+  sqs_name: 
+
+irc:
+  host: 
+  port: 6667
+  nick: 
+  default_channel: 
