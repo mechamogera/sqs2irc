@@ -5,18 +5,18 @@ require 'yaml'
 require 'daemon_spawn'
 
 class IRCSender
-  def initialize(host, port, nick)
-    @host, @port, @nick = host, port, nick
+  def initialize(host, port, nick, default_channel)
+    @host, @port, @nick, @default_channel = host, port, nick, default_channel
   end
 
   def send(channel, messages, notice = false)
     pigeon = CarrierPigeon.new(host: @host,
                                port: @port,
                                nick: @nick,
-                               channel: channel ,
+                               channel: channel || @default_channel ,
                                join: true)
     messages.each do |message|
-      pigeon.message(channel, message, notice)
+      pigeon.message(channel || @default_channel, message, notice)
     end
 
     pigeon.die
@@ -30,15 +30,19 @@ module SQS2IRC
                        proxy_uri: ENV['HTTP_PROXY'] || ENV['http_proxy'],
                        region: opts["aws"]["region"])
     queue = sqs.queues.named(opts["aws"]["sqs_name"])
-    irc = IRCSender.new(opts['irc']['host'], opts['irc']['port'], opts['irc']['nick'])
+    irc = IRCSender.new(opts['irc']['host'], opts['irc']['port'], opts['irc']['nick'], opts['irc']['default_channel'])
 
     queue.poll(wait_time_seconds: nil) do |msg|
-      data = JSON.parse(msg.as_sns_message.body)
-      irc.send(data['channel'], data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, true)
-      irc.send(data['channel'], data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten)
+      data = JSON.parse(msg.as_sns_message.body) rescue {'notices' => [msg.as_sns_message.body]}
+      if data['notices'] && !data['notices'].empty?
+        irc.send(data['channel'], data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, true)
+      end
+      if data['privmsgs'] && !data['privmsgs'].empty?
+        irc.send(data['channel'], data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten)
+      end
     end
   rescue => e
-    irc.send(opts['irc']['default_channel'], [e.message]) if irc rescue nil
+    irc.send(nil, [e.message], true) if irc rescue nil
     raise e
   end
 end
