@@ -9,14 +9,17 @@ class IRCSender
     @host, @port, @nick, @default_channel = host, port, nick, default_channel
   end
 
-  def send(channel, messages, notice = false)
+  def send(channel, messages, opts = {})
+    opts[:nick] ||= @nick
+    opts[:notice] ||= false
+
     pigeon = CarrierPigeon.new(host: @host,
                                port: @port,
-                               nick: @nick,
+                               nick: opts[:nick],
                                channel: channel || @default_channel ,
                                join: true)
     messages.each do |message|
-      pigeon.message(channel || @default_channel, message, notice)
+      pigeon.message(channel || @default_channel, message, opts[:notice])
     end
 
     pigeon.die
@@ -35,10 +38,14 @@ module SQS2IRC
     queue.poll(wait_time_seconds: nil) do |msg|
       data = JSON.parse(msg.as_sns_message.body) rescue {'notices' => [msg.as_sns_message.body]}
       if data['notices'] && !data['notices'].empty?
-        irc.send(data['channel'], data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, true)
+        irc.send(data['channel'], 
+                 data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, 
+                 {:notice => true, :nick => data['nick']})
       end
       if data['privmsgs'] && !data['privmsgs'].empty?
-        irc.send(data['channel'], data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten)
+        irc.send(data['channel'], 
+                 data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten,
+                 {:nick => data['nick']})
       end
     end
   rescue => e
