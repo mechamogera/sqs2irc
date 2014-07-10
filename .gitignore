@@ -2,3 +2,4 @@
 /vendor
 /tmp/*.pid
 /log/*.log
+.gitconfig
