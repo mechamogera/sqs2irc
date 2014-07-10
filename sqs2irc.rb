@@ -10,11 +10,13 @@ class IRCSender
   end
 
   def send(channel, messages, opts = {})
+    opts[:host] ||= @host
+    opts[:port] ||= @port
     opts[:nick] ||= @nick
     opts[:notice] ||= false
 
-    pigeon = CarrierPigeon.new(host: @host,
-                               port: @port,
+    pigeon = CarrierPigeon.new(host: opts[:host],
+                               port: opts[:port],
                                nick: opts[:nick],
                                channel: channel || @default_channel ,
                                join: true)
@@ -40,12 +42,17 @@ module SQS2IRC
       if data['notices'] && !data['notices'].empty?
         irc.send(data['channel'], 
                  data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, 
-                 {:notice => true, :nick => data['nick']})
+                 {notice: true, 
+                  nick: data['nick'],
+                  host: data['host'],
+                  port: data['port']})
       end
       if data['privmsgs'] && !data['privmsgs'].empty?
         irc.send(data['channel'], 
                  data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten,
-                 {:nick => data['nick']})
+                 {nick: data['nick'],
+                  host: data['host'],
+                  port: data['port']})
       end
     end
   rescue => e
