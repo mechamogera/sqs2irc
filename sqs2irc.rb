@@ -3,6 +3,7 @@ require 'carrier-pigeon'
 require 'json'
 require 'yaml'
 require 'daemon_spawn'
+require 'active_support/core_ext/object/blank'
 
 module IRC
   COLOR_CODE =
@@ -93,20 +94,15 @@ module SQS2IRC
 
     queue.poll(wait_time_seconds: nil) do |msg|
       data = JSON.parse(msg.as_sns_message.body) rescue {'notices' => [msg.as_sns_message.body]}
-      if data['notices'] && !data['notices'].empty?
-        irc.send(data['channel'], 
-                 data['notices'].map { |notice| notice.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten, 
-                 {notice: true, 
-                  nick: data['nick'],
-                  host: data['host'],
-                  port: data['port']})
-      end
-      if data['privmsgs'] && !data['privmsgs'].empty?
-        irc.send(data['channel'], 
-                 data['privmsgs'].map { |notice| notice.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten,
-                 {nick: data['nick'],
-                  host: data['host'],
-                  port: data['port']})
+      {'notices' => {notice: true}, 'privmsgs' => {}}.each do |type, opt|
+        if data[type] && !data[type].empty?
+          irc.send(data['channel'],
+                   data[type].map { |msgs| msgs.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten,
+                   {notice: opt[:notice],
+                    nick: data['nick'],
+                    host: data['host'],
+                    port: data['port']})
+        end
       end
     end
   rescue => e
