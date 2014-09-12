@@ -39,3 +39,36 @@ bundle exec ruby sqs2irc.rb start # daemonとして実行
   # repeated ...
 ],  
 ```
+
+### ircのメッセージに色付けする
+* 以下のようにすることでircにつぶやくメッセージに色を付けることができる
+```
+<color font="_color_"[ bg="_color_"]> hoge </color>
+```
+ * font...文字色
+ * bg...背景色(省略可能)
+
+#### 指定可能な色
+* white
+* black
+* blue
+* green
+* red
+* brown
+* purple
+* orange
+* yellow
+* lime
+* teal
+* aqua
+* royal
+* fuchsia
+* grey
+* silver
+
+#### 例
+```
+<color font="white">hoge</color>
+<color font="white" bg="black">hoge</color>
+<color font="white">hogehoe</color><color font="blue">fuge</color>hage
+```
