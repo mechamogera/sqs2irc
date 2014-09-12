@@ -42,7 +42,7 @@ module IRC
           attrs = $1.scan(/ ((?:font|bg)="(?:[^"]*?)")/).map! { |a| a[0].split('=') }
           %w(font bg).each do |type|
             val = attrs.detect{ |attr| attr[0] == type }
-            color[type] = ::IRC::COLOR_CODE[val[1].delete('"').to_sym] if val
+            color[type] = ::IRC::COLOR_CODE[val[1].delete(%Q("')).to_sym] if val
           end
           code = nil
           if color['font']
