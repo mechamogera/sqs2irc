@@ -39,7 +39,7 @@ module IRC
       def convert_color!(message)
         while (message =~ COLOR_PATTERN)
           color = {}
-          attrs = $1.scan(/ ((?:font|bg)="(?:[^"]*?)")/).map! { |a| a[0].split('=') }
+          attrs = $1.scan(/ ((?:font|bg)=["'](?:[^"']*?)["'])/).map! { |a| a[0].split('=') }
           %w(font bg).each do |type|
             val = attrs.detect{ |attr| attr[0] == type }
             color[type] = ::IRC::COLOR_CODE[val[1].delete(%Q("')).to_sym] if val
