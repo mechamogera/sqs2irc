@@ -4,6 +4,60 @@ require 'json'
 require 'yaml'
 require 'daemon_spawn'
 
+module IRC
+  COLOR_CODE =
+  {
+    white:   0,
+    black:   1,
+    blue:    2,
+    green:   3,
+    red:     4,
+    brown:   5,
+    purple:  6,
+    orange:  7,
+    yellow:  8,
+    lime:    9,
+    teal:    10,
+    aqua:    11,
+    royal:   12,
+    fuchsia: 13,
+    grey:    14,
+    silver:  15,
+  }
+
+  module MessageConverter
+    COLOR_PATTERN = /<color([^>]*?)>(.*?)<\/color>(.*)/
+    class << self
+      def convert(message)
+        msg = message.dup
+        convert_color!(msg)
+        return msg
+      end
+
+      private
+
+      def convert_color!(message)
+        while (message =~ COLOR_PATTERN)
+          color = {}
+          attrs = $1.scan(/ ((?:font|bg)="(?:[^"]*?)")/).map! { |a| a[0].split('=') }
+          %w(font bg).each do |type|
+            val = attrs.detect{ |attr| attr[0] == type }
+            color[type] = ::IRC::COLOR_CODE[val[1].delete('"').to_sym] if val
+          end
+          code = nil
+          if color['font']
+            code = "\x03%02d" % color['font']
+            code += ",%02d" % color['bg'] if color['bg']
+            code += ' '
+          end
+          message.sub!(COLOR_PATTERN, "#{code}\\2#{code ? " \x03" : nil}\\3")
+        end
+        return message
+      end
+    end
+  end
+end
+
 class IRCSender
   def initialize(host, port, nick, default_channel)
     @host, @port, @nick, @default_channel = host, port, nick, default_channel
@@ -41,7 +95,7 @@ module SQS2IRC
       data = JSON.parse(msg.as_sns_message.body) rescue {'notices' => [msg.as_sns_message.body]}
       if data['notices'] && !data['notices'].empty?
         irc.send(data['channel'], 
-                 data['notices'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten, 
+                 data['notices'].map { |notice| notice.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten, 
                  {notice: true, 
                   nick: data['nick'],
                   host: data['host'],
@@ -49,7 +103,7 @@ module SQS2IRC
       end
       if data['privmsgs'] && !data['privmsgs'].empty?
         irc.send(data['channel'], 
-                 data['privmsgs'].map { |notice| notice.split("\n").map { |msg| msg.chomp } }.flatten,
+                 data['privmsgs'].map { |notice| notice.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten,
                  {nick: data['nick'],
                   host: data['host'],
                   port: data['port']})
