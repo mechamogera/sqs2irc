@@ -3,7 +3,6 @@ require 'carrier-pigeon'
 require 'json'
 require 'yaml'
 require 'daemon_spawn'
-require 'active_support/core_ext/object/blank'
 
 module IRC
   COLOR_CODE =
