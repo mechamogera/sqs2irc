@@ -105,7 +105,7 @@ module SQS2IRC
       end
     end
   rescue => e
-    irc.send(nil, [e.message], true) if irc rescue nil
+    irc.send(nil, [e.message]) if irc rescue nil
     raise e
   end
 end
