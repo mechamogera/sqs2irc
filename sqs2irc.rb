@@ -95,12 +95,16 @@ module SQS2IRC
       data = JSON.parse(msg.as_sns_message.body) rescue {'notices' => [msg.as_sns_message.body]}
       {'notices' => {notice: true}, 'privmsgs' => {}}.each do |type, opt|
         if data[type] && !data[type].empty?
-          irc.send(data['channel'],
-                   data[type].map { |msgs| msgs.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten,
-                   {notice: opt[:notice],
-                    nick: data['nick'],
-                    host: data['host'],
-                    port: data['port']})
+          begin
+            irc.send(data['channel'],
+                     data[type].map { |msgs| msgs.split("\n").map { |msg| IRC::MessageConverter.convert(msg.chomp) } }.flatten,
+                     {notice: opt[:notice],
+                      nick: data['nick'],
+                      host: data['host'],
+                      port: data['port']})
+          rescue => e
+            irc.send(data['channel'], messages = [ e.message, msg.as_sns_message.body ])
+          end
         end
       end
     end
