@@ -103,7 +103,7 @@ module SQS2IRC
                       host: data['host'],
                       port: data['port']})
           rescue => e
-            irc.send(data['channel'], messages = [ e.message, msg.as_sns_message.body ])
+            irc.send(data['channel'], [e.message, msg.as_sns_message.body])
           end
         end
       end
